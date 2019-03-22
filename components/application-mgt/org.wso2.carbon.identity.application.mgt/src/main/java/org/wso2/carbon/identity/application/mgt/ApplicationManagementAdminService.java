@@ -27,8 +27,12 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.LocalAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.RequestPathAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.user.api.UserStoreException;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Application management admin service
@@ -83,19 +87,37 @@ public class ApplicationManagementAdminService extends AbstractAdmin {
      */
     public ApplicationBasicInfo[] getAllApplicationBasicInfo()
             throws IdentityApplicationManagementException {
+
+        long t1 = System.currentTimeMillis();
+        log.info("==== getAllApplicationBasicInfo() starting time : "+ t1);
         applicationMgtService = ApplicationManagementService.getInstance();
 
         ApplicationBasicInfo[] applicationBasicInfos = applicationMgtService.getAllApplicationBasicInfo(getTenantDomain(), getUsername());
         ArrayList<ApplicationBasicInfo> appInfo = new ArrayList<>();
+
+
+        List<String> userRolesList;
+        try {
+            String[] userRoles = CarbonContext.getThreadLocalCarbonContext().getUserRealm()
+                    .getUserStoreManager().getRoleListOfUser(getUsername());
+            userRolesList = Arrays.asList(userRoles);
+        } catch (UserStoreException e) {
+            throw new IdentityApplicationManagementException("Error while checking authorization for user: " +
+                    getUsername(), e);
+        }
+
         for (ApplicationBasicInfo applicationBasicInfo: applicationBasicInfos) {
-            if (ApplicationMgtUtil.isUserAuthorized(applicationBasicInfo.getApplicationName(), getUsername())) {
+            if (ApplicationMgtUtil.isUserAuthorized(applicationBasicInfo.getApplicationName(), getUsername(),
+                    userRolesList)) {
                 appInfo.add(applicationBasicInfo);
                 if (log.isDebugEnabled()) {
                     log.debug("Application Name:" + applicationBasicInfo.getApplicationName());
                 }
             }
         }
-        return appInfo.toArray(new ApplicationBasicInfo[appInfo.size()]);
+        ApplicationBasicInfo[] applicationBasicInfos1 = appInfo.toArray(new ApplicationBasicInfo[appInfo.size()]);
+        log.info("==== getAllApplicationBasicInfo()  time taken ms: " + (System.currentTimeMillis() - t1));
+        return applicationBasicInfos1;
     }
 
     /**

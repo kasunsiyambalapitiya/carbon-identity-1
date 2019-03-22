@@ -60,6 +60,7 @@ public class ApplicationMgtUtil {
     private static Log log = LogFactory.getLog(ApplicationMgtUtil.class);
 
     private ApplicationMgtUtil() {
+
     }
 
     public static org.wso2.carbon.user.api.Permission[] buildPermissions(String applicationName,
@@ -81,7 +82,17 @@ public class ApplicationMgtUtil {
     public static boolean isUserAuthorized(String applicationName, String username, int applicationID)
             throws IdentityApplicationManagementException {
 
-        if (!isUserAuthorized(applicationName, username)) {
+        List<String> userRolesList;
+        try {
+            String[] userRoles = CarbonContext.getThreadLocalCarbonContext().getUserRealm()
+                    .getUserStoreManager().getRoleListOfUser(username);
+            userRolesList = Arrays.asList(userRoles);
+        } catch (UserStoreException e) {
+            throw new IdentityApplicationManagementException("Error while checking authorization for user: " +
+                    username + " for application: " + applicationName, e);
+        }
+
+        if (!isUserAuthorized(applicationName, username, userRolesList)) {
             // maybe the role name of the app has updated. In this case, lets
             // load back the old app name
             ApplicationDAO appDAO = ApplicationMgtSystemConfig.getInstance().getApplicationDAO();
@@ -105,7 +116,7 @@ public class ApplicationMgtUtil {
         try {
             if (log.isDebugEnabled()) {
                 log.debug("Checking whether user has role : " + applicationRoleName + " by retrieving role list of " +
-                          "user : " + username);
+                        "user : " + username);
             }
             String[] userRoles = CarbonContext.getThreadLocalCarbonContext().getUserRealm()
                     .getUserStoreManager().getRoleListOfUser(username);
@@ -119,6 +130,17 @@ public class ApplicationMgtUtil {
                     username + " for application: " + applicationName, e);
         }
         return false;
+    }
+
+    public static boolean isUserAuthorized(String applicationName, String username, List<String> userRoles) {
+
+        String applicationRoleName = getAppRoleName(applicationName);
+/*            if (log.isDebugEnabled()) {
+                log.debug("Checking whether user has role : " + applicationRoleName + " by retrieving role list of " +
+                        "user : " + username);
+            }*/
+
+            return userRoles.contains(applicationRoleName);
     }
 
     /**
@@ -137,7 +159,7 @@ public class ApplicationMgtUtil {
             // create a role for the application and assign the user to that role.
             if (log.isDebugEnabled()) {
                 log.debug("Creating application role : " + roleName + " and assign the user : "
-                          + Arrays.toString(usernames) + " to that role");
+                        + Arrays.toString(usernames) + " to that role");
             }
             CarbonContext.getThreadLocalCarbonContext().getUserRealm().getUserStoreManager()
                     .addRole(roleName, usernames, null);
@@ -148,6 +170,7 @@ public class ApplicationMgtUtil {
     }
 
     private static String getAppRoleName(String applicationName) {
+
         return ApplicationConstants.APPLICATION_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + applicationName;
     }
 
@@ -158,6 +181,7 @@ public class ApplicationMgtUtil {
      * @throws IdentityApplicationManagementException
      */
     public static void deleteAppRole(String applicationName) throws IdentityApplicationManagementException {
+
         String roleName = getAppRoleName(applicationName);
 
         try {
@@ -339,6 +363,7 @@ public class ApplicationMgtUtil {
 
     private static void addPermission(ApplicationPermission[] permissions, Registry tenantGovReg) throws
             RegistryException {
+
         for (ApplicationPermission permission : permissions) {
             String permissionValue = permission.getValue();
 
@@ -367,6 +392,7 @@ public class ApplicationMgtUtil {
      */
     public static List<ApplicationPermission> loadPermissions(String applicationName)
             throws IdentityApplicationManagementException {
+
         applicationNode = getApplicationPermissionPath() + PATH_CONSTANT + applicationName;
         Registry tenantGovReg = CarbonContext.getThreadLocalCarbonContext().getRegistry(
                 RegistryType.USER_GOVERNANCE);
@@ -393,10 +419,8 @@ public class ApplicationMgtUtil {
                 loggedInUserChanged = true;
             }
 
-
             paths.clear();             //clear current paths
             List<ApplicationPermission> permissions = new ArrayList<ApplicationPermission>();
-
 
             permissionPath(tenantGovReg, applicationNode);      //get permission paths recursively
 
@@ -466,6 +490,7 @@ public class ApplicationMgtUtil {
      * @return
      */
     public static Property[] concatArrays(Property[] o1, Property[] o2) {
+
         Property[] ret = new Property[o1.length + o2.length];
 
         System.arraycopy(o1, 0, ret, 0, o1.length);
@@ -473,7 +498,6 @@ public class ApplicationMgtUtil {
 
         return ret;
     }
-
 
     public static String getApplicationPermissionPath() {
 
@@ -484,8 +508,8 @@ public class ApplicationMgtUtil {
     /**
      * Get Property values
      *
-     * @param tenantDomain Tenant domain
-     * @param spIssuer SP Issuer
+     * @param tenantDomain  Tenant domain
+     * @param spIssuer      SP Issuer
      * @param propertyNames Property names
      * @return Properties map
      * @throws IdentityApplicationManagementException
