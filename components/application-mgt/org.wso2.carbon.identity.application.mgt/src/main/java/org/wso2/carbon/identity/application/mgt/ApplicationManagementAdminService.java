@@ -83,6 +83,9 @@ public class ApplicationManagementAdminService extends AbstractAdmin {
      */
     public ApplicationBasicInfo[] getAllApplicationBasicInfo()
             throws IdentityApplicationManagementException {
+
+        long t1 = System.currentTimeMillis();
+        log.info("==== getAllApplicationBasicInfo() starting time : "+ t1);
         applicationMgtService = ApplicationManagementService.getInstance();
 
         ApplicationBasicInfo[] applicationBasicInfos = applicationMgtService.getAllApplicationBasicInfo(getTenantDomain(), getUsername());
@@ -95,7 +98,9 @@ public class ApplicationManagementAdminService extends AbstractAdmin {
                 }
             }
         }
-        return appInfo.toArray(new ApplicationBasicInfo[appInfo.size()]);
+        ApplicationBasicInfo[] applicationBasicInfos1 = appInfo.toArray(new ApplicationBasicInfo[appInfo.size()]);
+        log.info("==== getAllApplicationBasicInfo()  time taken ms: " + (System.currentTimeMillis() - t1));
+        return applicationBasicInfos1;
     }
 
     /**
